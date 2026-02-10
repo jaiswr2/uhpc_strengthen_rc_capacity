@@ -86,7 +86,8 @@ div[data-baseweb="select"] > div {
 # ============================================================
 # Load bundle
 # ============================================================
-@st.cache_data(show_spinner=True)
+
+@st.cache_resource(show_spinner=True)
 def load_bundle():
     here = os.path.dirname(os.path.abspath(__file__))
     path = os.path.join(here, "UHPC_GUI_bundle.joblib")
@@ -318,4 +319,5 @@ if run:
 # ============================================================
 with st.expander("Debug: bundle keys"):
     st.write(sorted(list(B.keys())))
+
 
