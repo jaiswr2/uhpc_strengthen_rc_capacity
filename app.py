@@ -92,8 +92,9 @@ div[data-baseweb="select"] > div {
 
 /* Optional: background */
 .stApp {
-    background: linear-gradient(135deg, #0b1220 0%, #111827 45%, #0b1220 100%);
+    background: #ffffff !important;
 }
+
 </style>
 """,
     unsafe_allow_html=True,
@@ -351,3 +352,4 @@ with st.expander("Debug: bundle keys + environment"):
         st.write("lightgbm:", lightgbm.__version__)
     except Exception:
         pass
+
