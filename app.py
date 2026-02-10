@@ -32,7 +32,6 @@ st.set_page_config(
 # -----------------------------
 # CSS Theme (colorful dark)
 # -----------------------------
-import streamlit as st
 
 st.markdown(
     """
@@ -94,6 +93,17 @@ def load_bundle():
     return joblib.load(path)
 
 B = load_bundle()
+
+st.write("✅ Bundle loaded")
+st.write("Bundle keys:", sorted(B.keys()))
+st.write("sklearn version:", __import__("sklearn").__version__)
+st.write("xgboost version:", __import__("xgboost").__version__)
+try:
+    import lightgbm
+    st.write("lightgbm version:", lightgbm.__version__)
+except Exception as e:
+    st.error("LightGBM import failed")
+    st.exception(e)
 
 # Required objects (your exact keys)
 preprocess_reg = B["preprocess_reg"]           # fitted ColumnTransformer (regression)
@@ -308,3 +318,4 @@ if run:
 # ============================================================
 with st.expander("Debug: bundle keys"):
     st.write(sorted(list(B.keys())))
+
