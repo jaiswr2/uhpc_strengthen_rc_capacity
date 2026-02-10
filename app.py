@@ -111,7 +111,7 @@ def load_bundle():
 
 B = load_bundle()
 
-# Required objects (your exact keys)
+# Required objects ( exact keys)
 preprocess_reg = B["preprocess_reg"]           # fitted ColumnTransformer (regression)
 model_mu_rc    = B["model_mu_rc"]              # fitted regressor (expects processed X)
 model_mu_comp  = B["model_mu_comp"]            # fitted regressor (expects processed X)
@@ -200,7 +200,7 @@ def mid(vmin, vmax):
 # Title
 # ============================================================
 st.title("🧱 UHPC-Strengthened RC Beam: Capacity & Failure Mode Predictor")
-st.caption("Predict $M_{u,rc}$, $M_{u,comp}$, and Failure Mode using your saved ML bundle.")
+st.caption("Predict $M_{u,rc}$, $M_{u,comp}$, and Failure Mode of the damaged RC beam strengthened with UHPC. Give the input of RC beams and UHPC properties to get the Ultimate Capacity and Failure Mode of Composite Beam.")
 
 # ============================================================
 # Inputs (3 columns)
@@ -352,5 +352,6 @@ with st.expander("Debug: bundle keys + environment"):
         st.write("lightgbm:", lightgbm.__version__)
     except Exception:
         pass
+
 
 
