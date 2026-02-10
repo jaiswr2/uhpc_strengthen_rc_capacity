@@ -48,7 +48,7 @@ label,
 .stNumberInput label,
 .stSelectbox label,
 .stTextInput label {
-    font-size: 22px !important;
+    font-size: 26px !important;
     font-weight: 900 !important;
     color: #FBBF24 !important;
     letter-spacing: 0.2px !important;
@@ -352,4 +352,5 @@ with st.expander("Debug: bundle keys + environment"):
         st.write("lightgbm:", lightgbm.__version__)
     except Exception:
         pass
+
 
