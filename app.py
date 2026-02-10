@@ -267,9 +267,7 @@ with left:
 
 with right:
     st.info(
-        "For **$M_{u,rc}$** and **$M_{u,comp}$**, the app applies your saved `preprocess_reg` and then predicts. "
-        "For **Failure mode**, the app uses your saved classifier pipeline, but runs it manually "
-        "(prep.transform → xgb.predict) to avoid a Streamlit Cloud sklearn tag error."
+        " **$M_{u,rc}$**, **$M_{u,comp}$** and Failure Mode Results"
     )
 
 def decode_failure(pred_numeric_or_array):
@@ -352,6 +350,7 @@ with st.expander("Debug: bundle keys + environment"):
         st.write("lightgbm:", lightgbm.__version__)
     except Exception:
         pass
+
 
 
 
