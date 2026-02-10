@@ -12,6 +12,12 @@
 #   FAILURE_MAP, IFACE_LEVELS, LAYOUT_LEVELS, input_features,
 #   label_encoder_fail, model_fail, model_mu_comp, model_mu_rc,
 #   preprocess_reg, target_fail, target_mu_comp, target_mu_rc
+#
+# IMPORTANT FIX (Streamlit Cloud):
+#   - Avoid model_fail.predict(...) because sklearn Pipeline predict can crash
+#     with "__sklearn_tags__" error (XGBClassifier + sklearn tags).
+#   - Instead: model_fail.named_steps["prep"].transform(...) then
+#     model_fail.named_steps["xgb"].predict(...)
 # ============================================================
 
 import os
@@ -32,10 +38,10 @@ st.set_page_config(
 # -----------------------------
 # CSS Theme (colorful dark)
 # -----------------------------
-
 st.markdown(
     """
 <style>
+/* Label text above widgets */
 div[data-testid="stWidgetLabel"] label,
 div[data-testid="stWidgetLabel"] > label,
 label,
@@ -47,36 +53,46 @@ label,
     color: #FBBF24 !important;
     letter-spacing: 0.2px !important;
 }
-
 div[data-testid="stWidgetLabel"] { margin-bottom: 2px !important; }
 
+/* Value inside number/text inputs */
 div[data-baseweb="input"] input {
     color: #60A5FA !important;
     font-size: 20px !important;
     font-weight: 800 !important;
 }
 
+/* Selected value in selectbox */
 div[data-baseweb="select"] div[role="combobox"] {
     color: #60A5FA !important;
     font-size: 20px !important;
     font-weight: 800 !important;
 }
 
+/* Placeholder (if any) */
 div[data-baseweb="input"] input::placeholder {
     color: #94A3B8 !important;
     font-size: 18px !important;
 }
 
+/* Dropdown list items */
 div[role="listbox"] * { font-size: 18px !important; }
 
+/* Make inputs taller */
 div[data-baseweb="input"] > div,
 div[data-baseweb="select"] > div {
     min-height: 46px !important;
 }
 
+/* Captions */
 .stCaption {
     font-size: 14px !important;
     color: #A7F3D0 !important;
+}
+
+/* Optional: background */
+.stApp {
+    background: linear-gradient(135deg, #0b1220 0%, #111827 45%, #0b1220 100%);
 }
 </style>
 """,
@@ -86,7 +102,6 @@ div[data-baseweb="select"] > div {
 # ============================================================
 # Load bundle
 # ============================================================
-
 @st.cache_resource(show_spinner=True)
 def load_bundle():
     here = os.path.dirname(os.path.abspath(__file__))
@@ -94,17 +109,6 @@ def load_bundle():
     return joblib.load(path)
 
 B = load_bundle()
-
-st.write("✅ Bundle loaded")
-st.write("Bundle keys:", sorted(B.keys()))
-st.write("sklearn version:", __import__("sklearn").__version__)
-st.write("xgboost version:", __import__("xgboost").__version__)
-try:
-    import lightgbm
-    st.write("lightgbm version:", lightgbm.__version__)
-except Exception as e:
-    st.error("LightGBM import failed")
-    st.exception(e)
 
 # Required objects (your exact keys)
 preprocess_reg = B["preprocess_reg"]           # fitted ColumnTransformer (regression)
@@ -118,7 +122,7 @@ target_mu_rc   = B.get("target_mu_rc", r"M$_{u,rc}$")
 target_mu_comp = B.get("target_mu_comp", r"M$_{u,comp}$")
 target_fail    = B.get("target_fail", "Failure mode")
 
-LAYOUT_LEVELS  = B.get("LAYOUT_LEVELS", ["T-sided","3-sided","2-sided","C-sided","1-sided"])
+LAYOUT_LEVELS  = B.get("LAYOUT_LEVELS", ["T-sided", "3-sided", "2-sided", "C-sided", "1-sided"])
 IFACE_LEVELS   = B.get("IFACE_LEVELS", [
     "Roughned and UHPC casting",
     "Roughned, Epoxy adhesive and UHPC casting",
@@ -128,7 +132,7 @@ IFACE_LEVELS   = B.get("IFACE_LEVELS", [
 FAILURE_MAP_LONG_TO_SHORT = B.get("FAILURE_MAP", {})  # long -> short
 FAILURE_MAP_SHORT_TO_LONG = {v: k for k, v in FAILURE_MAP_LONG_TO_SHORT.items()}
 
-# Fallback (your requested full names)
+# Fallback (full names)
 FAILURE_SHORT_TO_LONG_FALLBACK = {
     "FLX": "Flexure",
     "CCR": "Concrete crushing",
@@ -140,12 +144,21 @@ for k, v in FAILURE_SHORT_TO_LONG_FALLBACK.items():
     FAILURE_MAP_SHORT_TO_LONG.setdefault(k, v)
 
 # ============================================================
-# Input display metadata (range + units)
-# IMPORTANT: Your trained model uses ONLY the 14 features in input_features.
-# You gave ranges for more variables (L, a, bw, d, etc.), but they are NOT in input_features.
-# So we display only for variables that are actually part of input_features.
+# CRITICAL FIX: avoid Pipeline.predict on Streamlit Cloud
 # ============================================================
+# Extract steps from model_fail (handles both "prep/xgb" names and fallback)
+fail_prep = getattr(model_fail, "named_steps", {}).get("prep", None)
+fail_clf  = getattr(model_fail, "named_steps", {}).get("xgb", None)
 
+if fail_prep is None:
+    fail_prep = model_fail.steps[0][1]
+if fail_clf is None:
+    fail_clf = model_fail.steps[-1][1]
+
+# ============================================================
+# Input display metadata (range + units)
+# (ONLY for features in input_features)
+# ============================================================
 RANGE_UNITS = {
     r"f$_{c,rc}$":   ("MPa", 20.1, 70.07),
     r"ρ$_{sl,rc}$":  ("%",   0.0,  8.31),
@@ -159,7 +172,7 @@ RANGE_UNITS = {
     r"f$_{c,uhpc}$": ("MPa", 102.2, 204.0),
     r"ρ$_{uhpc}$":   ("%",   0.0,  3.35),
     r"v$_{f}$":      ("%",   0.5,  3.0),
-    r"λ$_{s}$":      ("-",   26.79,125.0),
+    r"λ$_{s}$":      ("-",   26.79, 125.0),
 }
 
 PRETTY_LABELS = {
@@ -180,7 +193,7 @@ PRETTY_LABELS = {
 }
 
 def mid(vmin, vmax):
-    return float(vmin + 0.5*(vmax - vmin))
+    return float(vmin + 0.5 * (vmax - vmin))
 
 # ============================================================
 # Title
@@ -202,7 +215,7 @@ for i, feat in enumerate(input_features):
         label = PRETTY_LABELS.get(feat, feat)
 
         if feat == "layout":
-            default_idx = 0 if "T-sided" not in LAYOUT_LEVELS else LAYOUT_LEVELS.index("T-sided")
+            default_idx = LAYOUT_LEVELS.index("T-sided") if "T-sided" in LAYOUT_LEVELS else 0
             user[feat] = st.selectbox(label, options=LAYOUT_LEVELS, index=default_idx)
             st.caption("Options: " + ", ".join(LAYOUT_LEVELS))
 
@@ -221,7 +234,7 @@ for i, feat in enumerate(input_features):
                 max_value=float(vmax),
                 value=float(v0),
                 step=step,
-                format="%.4f" if (abs(vmax) < 100 and unit not in ["mm"]) else "%.2f"
+                format="%.4f" if (abs(vmax) < 100 and unit not in ["mm"]) else "%.2f",
             )
             if feat in RANGE_UNITS:
                 st.caption(f"Range: {vmin} – {vmax} {unit}")
@@ -239,8 +252,10 @@ with st.expander("Show feature ranges & units (for inputs used by the models)"):
             unit, dr = "-", "Categorical"
         rows.append([label, feat, unit, dr])
 
-    st.dataframe(pd.DataFrame(rows, columns=["Feature", "Symbol", "Unit", "Data Range"]),
-                 use_container_width=True)
+    st.dataframe(
+        pd.DataFrame(rows, columns=["Feature", "Symbol", "Unit", "Data Range"]),
+        use_container_width=True,
+    )
 
 # ============================================================
 # Predict
@@ -252,7 +267,8 @@ with left:
 with right:
     st.info(
         "For **$M_{u,rc}$** and **$M_{u,comp}$**, the app applies your saved `preprocess_reg` and then predicts. "
-        "For **Failure mode**, it uses your saved pipeline `model_fail` (which includes preprocessing)."
+        "For **Failure mode**, the app uses your saved classifier pipeline, but runs it manually "
+        "(prep.transform → xgb.predict) to avoid a Streamlit Cloud sklearn tag error."
     )
 
 def decode_failure(pred_numeric_or_array):
@@ -262,7 +278,7 @@ def decode_failure(pred_numeric_or_array):
     else:
         pred0 = pred_numeric_or_array
 
-    # XGB classifier returns numeric class IDs here (because you label-encoded)
+    # XGB classifier returns numeric class IDs (LabelEncoded)
     try:
         short = le_fail.inverse_transform([int(pred0)])[0]
     except Exception:
@@ -284,12 +300,13 @@ if run:
         st.exception(e)
         st.stop()
 
-    # --- Classification prediction (pipeline expects RAW) ---
+    # --- Classification prediction (manual, avoids Pipeline.predict crash on cloud) ---
     try:
-        y_fail_num = model_fail.predict(X_in)
+        X_fail = fail_prep.transform(X_in)
+        y_fail_num = fail_clf.predict(X_fail)
         fail_long = decode_failure(y_fail_num)
     except Exception as e:
-        st.error("Failure mode prediction failed (model_fail pipeline mismatch).")
+        st.error("Failure mode prediction failed (manual pipeline steps mismatch).")
         st.exception(e)
         st.stop()
 
@@ -315,9 +332,22 @@ if run:
     st.success("Done ✅ Change inputs and click **Predict** again.")
 
 # ============================================================
-# Debug
+# Debug (optional)
 # ============================================================
-with st.expander("Debug: bundle keys"):
-    st.write(sorted(list(B.keys())))
-
-
+with st.expander("Debug: bundle keys + environment"):
+    st.write("Bundle keys:", sorted(list(B.keys())))
+    try:
+        import sklearn
+        st.write("sklearn:", sklearn.__version__)
+    except Exception:
+        pass
+    try:
+        import xgboost
+        st.write("xgboost:", xgboost.__version__)
+    except Exception:
+        pass
+    try:
+        import lightgbm
+        st.write("lightgbm:", lightgbm.__version__)
+    except Exception:
+        pass
