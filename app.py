@@ -164,16 +164,16 @@ RANGE_UNITS = {
 
 PRETTY_LABELS = {
     # ---- NEW (RC geometry) ----
-    "L":            "Span length",
+
     "a":            "Shear span",
-    r"b$_{w}$":     "Beam width",
+
     "d":            "Effective depth",
 
     # ---- existing ----
     r"f$_{c,rc}$":   "Concrete compressive strength (RC)",
     r"ρ$_{sl,rc}$":  "Longitudinal reinforcement ratio (RC)",
     r"f$_{y,rc}$":   "Longitudinal steel yield strength (RC)",
-    r"f$_{yv,rc}$":  "Shear reinforcement yield strength (RC)",
+
     r"ρ$_{v,rc}$":   "Shear reinforcement ratio (RC)",
     "layout":        "UHPC layout",
     r"t$_{uhpc}$":   "UHPC layer thickness",
@@ -183,7 +183,7 @@ PRETTY_LABELS = {
     r"ρ$_{uhpc}$":   "UHPC reinforcement ratio",
     r"v$_{f}$":      "Fiber volume fraction",
     r"λ$_{s}$":      "Steel fiber aspect ratio",
-    "iface":         "RC–UHPC interface preparation",
+    "interface":         "RC–UHPC interface preparation",
 }
 
 def mid(vmin, vmax):
