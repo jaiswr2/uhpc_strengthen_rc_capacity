@@ -29,7 +29,7 @@ st.set_page_config(
 )
 
 # -----------------------------
-# CSS Theme (keep as-is)
+# CSS Theme
 # -----------------------------
 st.markdown(
     """
@@ -99,7 +99,28 @@ model_mu_rc    = B["model_mu_rc"]
 model_mu_comp  = B["model_mu_comp"]
 model_fail     = B["model_fail"]
 le_fail        = B["label_encoder_fail"]
-input_features = B["input_features"]
+
+# ------------------------------------------------------------
+# FORCE the intended UI/model input list
+# This removes L, b_w, and fyv_rc even if they exist in bundle
+# ------------------------------------------------------------
+input_features = [
+    "a",
+    "d",
+    r"f$_{c,rc}$",
+    r"ρ$_{sl,rc}$",
+    r"f$_{y,rc}$",
+    r"ρ$_{v,rc}$",
+    "layout",
+    r"t$_{uhpc}$",
+    r"E$_{uhpc}$",
+    r"f$_{t,uhpc}$",
+    r"f$_{c,uhpc}$",
+    r"ρ$_{uhpc}$",
+    r"v$_{f}$",
+    r"λ$_{s}$",
+    "interface",
+]
 
 target_mu_rc   = B.get("target_mu_rc", r"M$_{u,rc}$")
 target_mu_comp = B.get("target_mu_comp", r"M$_{u,comp}$")
@@ -137,20 +158,15 @@ if fail_clf is None:
     fail_clf = model_fail.steps[-1][1]
 
 # ============================================================
-# Ranges + labels (UPDATED to include L, a, b_w, d)
+# Ranges + labels
 # ============================================================
 RANGE_UNITS = {
-    # ---- NEW (RC geometry) ----
-
     "a":            ("mm", 200.0, 1350.0),
-
     "d":            ("mm", 110.0, 425.0),
 
-    # ---- existing ----
     r"f$_{c,rc}$":   ("MPa", 20.1, 70.07),
     r"ρ$_{sl,rc}$":  ("%",   0.0,  8.31),
     r"f$_{y,rc}$":   ("MPa", 0.0,  600.0),
-
     r"ρ$_{v,rc}$":   ("%",   0.0,  1.43),
 
     r"t$_{uhpc}$":   ("mm",  5.0,  70.0),
@@ -163,18 +179,14 @@ RANGE_UNITS = {
 }
 
 PRETTY_LABELS = {
-    # ---- NEW (RC geometry) ----
-
     "a":            "Shear span",
-
     "d":            "Effective depth",
 
-    # ---- existing ----
     r"f$_{c,rc}$":   "Concrete compressive strength (RC)",
     r"ρ$_{sl,rc}$":  "Longitudinal reinforcement ratio (RC)",
     r"f$_{y,rc}$":   "Longitudinal steel yield strength (RC)",
-
     r"ρ$_{v,rc}$":   "Shear reinforcement ratio (RC)",
+
     "layout":        "UHPC layout",
     r"t$_{uhpc}$":   "UHPC layer thickness",
     r"E$_{uhpc}$":   "UHPC elastic modulus",
@@ -183,7 +195,7 @@ PRETTY_LABELS = {
     r"ρ$_{uhpc}$":   "UHPC reinforcement ratio",
     r"v$_{f}$":      "Fiber volume fraction",
     r"λ$_{s}$":      "Steel fiber aspect ratio",
-    "interface":         "RC–UHPC interface preparation",
+    "interface":     "RC–UHPC interface preparation",
 }
 
 def mid(vmin, vmax):
@@ -196,7 +208,7 @@ st.title("🧱 UHPC-Strengthened RC Beam: Capacity & Failure Mode Predictor")
 st.caption("Predict $M_{u,rc}$, $M_{u,comp}$, and Failure Mode using your saved ML bundle.")
 
 # ============================================================
-# Inputs (3 columns)
+# Inputs
 # ============================================================
 st.subheader("Inputs")
 
@@ -229,7 +241,9 @@ for i, feat in enumerate(input_features):
                 value=float(v0),
                 step=step,
                 format="%.2f" if unit in ["mm", "MPa", "GPa", "%"] else "%.4f",
+                key=f"input_{feat}"
             )
+
             if feat in RANGE_UNITS:
                 st.caption(f"Range: {vmin:g} – {vmax:g} {unit}")
 
@@ -260,7 +274,7 @@ if run:
     mu_rc_pred   = float(model_mu_rc.predict(X_reg).ravel()[0])
     mu_comp_pred = float(model_mu_comp.predict(X_reg).ravel()[0])
 
-    # classifier (manual steps)
+    # classifier
     X_fail = fail_prep.transform(X_in)
     y_fail_num = fail_clf.predict(X_fail)
     fail_long = decode_failure(y_fail_num)
