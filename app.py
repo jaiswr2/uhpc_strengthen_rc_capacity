@@ -213,7 +213,7 @@ for i, feat in enumerate(input_features):
             user[feat] = st.selectbox(label, options=LAYOUT_LEVELS, index=default_idx)
             st.caption("Options: " + ", ".join(LAYOUT_LEVELS))
 
-        elif feat == "iface":
+        elif feat == "interface":
             user[feat] = st.selectbox(label, options=IFACE_LEVELS, index=0)
             st.caption("Options: " + "; ".join(IFACE_LEVELS))
 
